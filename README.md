@@ -79,3 +79,20 @@ sentiment-vol-lab/
 | Sentiment | OpenAI API, VADER, TextBlob |
 | UI | Streamlit, Plotly |
 
+
+## Deploy (Free, No Download Required)
+
+The app is designed for **Streamlit Community Cloud** — deploy in 3 clicks, then share the link with anyone.
+
+1. Go to **https://share.streamlit.io** and sign in with GitHub
+2. Click **"New app"** → select ffgh-code/insuranceandquantification
+3. Set **Main file path** to app/app.py and click **"Deploy"**
+
+2 minutes later you get a public URL like https://insuranceandquantification.streamlit.app.
+
+Put that link in your resume, portfolio, or Medium article so anyone can open it instantly.
+
+Or deploy on any platform that supports Docker:
+
+docker build -t sentiment-vol-lab .
+docker run -p 8501:8501 sentiment-vol-lab
