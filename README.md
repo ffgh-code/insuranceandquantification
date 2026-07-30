@@ -32,14 +32,15 @@ Sentiment + Volatility -> Trading Strategy -> Backtest
 
 ## Quick Start
 
-```bash
+`ash
+git clone https://github.com/ffgh-code/insuranceandquantification.git
+cd insuranceandquantification
+
 pip install -r requirements.txt
 streamlit run app/app.py
-```
+`
 
-Open http://localhost:8501 in your browser.
-
----
+启动后终端会显示本地访问地址（通常是 http://localhost:8501），在浏览器打开即可。
 
 ## Results (CSI 300)
 
@@ -77,3 +78,4 @@ sentiment-vol-lab/
 | Statistics | arch (GARCH), statsmodels |
 | Sentiment | OpenAI API, VADER, TextBlob |
 | UI | Streamlit, Plotly |
+
