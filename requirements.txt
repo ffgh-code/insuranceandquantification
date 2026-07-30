@@ -17,7 +17,6 @@ yfinance>=0.2.30
 arch>=6.0.0
 
 # Deep learning
-torch>=2.0.0
 
 # Sentiment analysis
 vaderSentiment>=3.3.0

@@ -52,7 +52,7 @@ class LSTMVolatility:
     def _build_model(self, input_size: int):
         """Build LSTM model architecture."""
         import torch
-        import torch.nn as nn
+#         import torch.nn as nn
 
         class VolatilityLSTM(nn.Module):
             def __init__(self, input_size, hidden_size, num_layers, dropout):
@@ -124,9 +124,9 @@ class LSTMVolatility:
             Dict with training history and model info.
         """
         import torch
-        import torch.nn as nn
-        import torch.optim as optim
-        from torch.utils.data import DataLoader, TensorDataset
+#         import torch.nn as nn
+#         import torch.optim as optim
+#         from torch.utils.data import DataLoader, TensorDataset
 
         # Prepare feature matrix
         features = []
