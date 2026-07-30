@@ -1,5 +1,7 @@
 ﻿# Insurance and Quantification
 
+[![Streamlit App](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://insuranceandquantification-fbmyvwetabtki2r5m8krac.streamlit.app/)
+
 A quantitative finance project combining **LLM-powered sentiment analysis** with **statistical and deep learning volatility models** (GARCH + LSTM), running on **real Chinese A-share market data (CSI 300 index)**.
 
 The modular architecture makes it easy to extend with US market data, custom strategies, and actuarial applications.
