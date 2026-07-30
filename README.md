@@ -1,4 +1,4 @@
-﻿# Sentiment-Enhanced Volatility Prediction Platform
+﻿# Insurance and Quantification
 
 A quantitative finance project combining **LLM-powered sentiment analysis** with **statistical and deep learning volatility models** (GARCH + LSTM), running on **real Chinese A-share market data (CSI 300 index)**.
 
