@@ -63,8 +63,9 @@ A 股的综合策略夏普比（0.43）低于之前用美股合成数据的版�
 
 ## 代码
 
-https://github.com/YOUR_USERNAME/sentiment-vol-lab
+https://github.com/ffgh-code/insuranceandquantification
 
 依赖：`pip install -r requirements.txt`
 
 启动面板：`streamlit run app/app.py`
+
