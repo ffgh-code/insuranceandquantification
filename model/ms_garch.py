@@ -201,8 +201,6 @@ class MarkovSwitchingGARCH:
             if np.isfinite(ll) and ll > best_ll:
                 best_ll = ll
                 best_params = cand.copy()
-            if i % 50 == 0 and i > 0:
-                pass
         if best_params is None:
             raise RuntimeError("MS-GARCH estimation failed: no finite likelihood found.")
         self.params = best_params
