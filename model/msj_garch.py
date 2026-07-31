@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.stats import norm, poisson
+from scipy.stats import norm, poisson, t
 
 from model.ms_garch import _sentiment_matrix, _stationary_distribution
 
@@ -27,13 +27,17 @@ class RegimeSwitchingJumpGARCH:
       f_i(r_t) = sum_k Poisson(k; nu_i) * N(r_t; k*muJ, h_i,t + k*sigmaJ^2).
     """
 
-    def __init__(self, n_regimes: int = 2, category_names=None, max_jumps: int = 3):
+    def __init__(self, n_regimes: int = 2, category_names=None, max_jumps: int = 3,
+                 jump_dist: str = "normal"):
         if n_regimes not in (2, 3):
             raise ValueError("n_regimes must be 2 or 3 in the current implementation.")
+        if jump_dist not in ("normal", "t"):
+            raise ValueError("jump_dist must be 'normal' or 't'.")
         self.n_regimes = n_regimes
         self.category_names = list(category_names) if category_names else None
         self.n_categories = len(self.category_names) if self.category_names else 1
         self.max_jumps = max_jumps
+        self.jump_dist = jump_dist
         self.params = None
         self.filtered_probs = None
         self.h = None
@@ -62,17 +66,22 @@ class RegimeSwitchingJumpGARCH:
         nu = params[4 * n + n * K:5 * n + n * K]
         muJ = params[5 * n + n * K]
         sigmaJ = params[5 * n + n * K + 1]
-        raw = params[5 * n + n * K + 2:].reshape(n, n)
-        return omega, alpha, beta, delta, lam, nu, muJ, sigmaJ, raw
+        if self.jump_dist == "t":
+            df = params[5 * n + n * K + 2]
+            raw = params[5 * n + n * K + 3:].reshape(n, n)
+        else:
+            df = None
+            raw = params[5 * n + n * K + 2:].reshape(n, n)
+        return omega, alpha, beta, delta, lam, nu, muJ, sigmaJ, df, raw
 
     def _transition(self, params):
-        _, _, _, _, _, _, _, _, raw = self._param_slices(params)
+        _, _, _, _, _, _, _, _, _, raw = self._param_slices(params)
         exp = np.exp(raw - raw.max(axis=1, keepdims=True))
         return exp / exp.sum(axis=1, keepdims=True)
 
     def _variance_paths(self, returns, sentiment, params):
         n = self.n_regimes
-        omega, alpha, beta, delta, lam, _, _, _, _ = self._param_slices(params)
+        omega, alpha, beta, delta, lam, _, _, _, _, _ = self._param_slices(params)
         T = len(returns)
         h = np.full((T, n), float(np.var(returns)))
         r = np.asarray(returns, dtype=float)
@@ -90,18 +99,22 @@ class RegimeSwitchingJumpGARCH:
             )
         return np.maximum(h, 1e-8)
 
-    def _jump_density(self, r, h, nu, muJ, sigmaJ):
+    def _jump_density(self, r, h, nu, muJ, sigmaJ, df=None):
         """Regime-specific mixture density over jump arrivals."""
         ks = np.arange(self.max_jumps + 1)
         pmf = poisson.pmf(ks, nu)
         var = h + ks * (sigmaJ ** 2)
         sd = np.sqrt(np.maximum(var, 1e-10))
-        dens = pmf * norm.pdf(r, loc=ks * muJ, scale=sd)
+        if self.jump_dist == "t" and df is not None:
+            z = (r - ks * muJ) / sd
+            dens = pmf * t.pdf(z, df=df) / sd
+        else:
+            dens = pmf * norm.pdf(r, loc=ks * muJ, scale=sd)
         return np.maximum(dens.sum(), 1e-300)
 
     def _filter(self, returns, sentiment, params):
         h = self._variance_paths(returns, sentiment, params)
-        _, _, _, _, _, nu, muJ, sigmaJ, _ = self._param_slices(params)
+        _, _, _, _, _, nu, muJ, sigmaJ, df, _ = self._param_slices(params)
         P = self._transition(params)
         pi0 = _stationary_distribution(P)
         T = len(returns)
@@ -110,7 +123,7 @@ class RegimeSwitchingJumpGARCH:
         pred = pi0.copy()
         for t in range(T):
             eta = np.array([
-                self._jump_density(returns[t], h[t, i], nu[i], muJ, sigmaJ)
+                self._jump_density(returns[t], h[t, i], nu[i], muJ, sigmaJ, df)
                 for i in range(self.n_regimes)
             ])
             weighted = pred * eta
@@ -137,6 +150,8 @@ class RegimeSwitchingJumpGARCH:
         bounds += [(1e-4, 0.60)] * n
         bounds += [(-0.03, 0.03)]
         bounds += [(1e-4, 0.05)]
+        if self.jump_dist == "t":
+            bounds += [(2.0, 30.0)]
         bounds += [(-3.0, 3.0)] * (n * n)
         return bounds
 
@@ -153,7 +168,8 @@ class RegimeSwitchingJumpGARCH:
         sigmaJ = rng.uniform(0.002, 0.015)
         raw = rng.normal(0.0, 1.0, (n, n))
         raw[np.diag_indices(n)] += 2.5
-        return np.concatenate([omega, alpha, beta, delta, lam, nu, [muJ, sigmaJ], raw.ravel()])
+        extra = [rng.uniform(4.0, 10.0)] if self.jump_dist == "t" else []
+        return np.concatenate([omega, alpha, beta, delta, lam, nu, [muJ, sigmaJ], extra, raw.ravel()])
 
     def fit(self, returns, sentiment=None, n_iter: int = 200, max_iter: int = 250,
             seed: int = 42, use_optimizer: bool = False) -> dict:
@@ -196,7 +212,7 @@ class RegimeSwitchingJumpGARCH:
         self.n_params = len(best_params)
         self.aic = -2.0 * self.log_likelihood + 2.0 * self.n_params
         self.bic = -2.0 * self.log_likelihood + self.n_params * np.log(len(returns))
-        return {
+        result = {
             "params": best_params,
             "log_likelihood": self.log_likelihood,
             "aic": self.aic,
@@ -207,6 +223,10 @@ class RegimeSwitchingJumpGARCH:
             "categories": self.categories,
             "regime_names": self.regime_names,
         }
+        if self.jump_dist == "t":
+            _, _, _, _, _, _, _, _, df, _ = self._param_slices(best_params)
+            result["degrees_of_freedom"] = df
+        return result
 
     def jump_intensities(self) -> pd.DataFrame:
         if self.params is None:

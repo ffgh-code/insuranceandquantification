@@ -74,8 +74,12 @@ def run() -> dict:
     msj2 = RegimeSwitchingJumpGARCH(n_regimes=2, category_names=categories)
     rj = msj2.fit(returns_pct, sentiment, n_iter=150)
 
+    msj_t = RegimeSwitchingJumpGARCH(n_regimes=2, category_names=categories, jump_dist="t")
+    rj_t = msj_t.fit(returns_pct, sentiment, n_iter=120)
+
     het = CategoryHeterogeneityTest(categories=categories)
     het_table = het.estimate(returns_pct, sentiment)
+    single_cat_table = het.single_category_regressions(returns_pct, sentiment)
     het_lr = het.likelihood_ratio(returns_pct, sentiment)
 
     garch = GARCHModel(p=1, q=1, model_type="GARCH", distribution="normal")
@@ -139,9 +143,18 @@ def run() -> dict:
                 "params": rj["params"].tolist(),
                 "jump_intensities": msj2.jump_intensities().to_dict("split"),
             },
+            "msj_garch_t_2reg_categories": {
+                "log_likelihood": rj_t["log_likelihood"],
+                "aic": rj_t["aic"],
+                "bic": rj_t["bic"],
+                "params": rj_t["params"].tolist(),
+                "degrees_of_freedom": rj_t["degrees_of_freedom"],
+                "jump_intensities": msj_t.jump_intensities().to_dict("split"),
+            },
         },
         "category_heterogeneity": {
             "table": het_table.to_dict("split"),
+            "single_category": single_cat_table.to_dict("split"),
             "lr": het_lr,
         },
         "mortality": {

@@ -79,3 +79,25 @@ class CategoryHeterogeneityTest:
             "p_value": pval,
             "reject_homogeneity": pval < 0.05,
         }
+
+    def single_category_regressions(self, returns: pd.Series,
+                                    sentiment: pd.DataFrame) -> pd.DataFrame:
+        """Univariate OLS of volatility on each sentiment category separately."""
+        y, _, s = self._design(returns, sentiment)
+        rows = []
+        for j, cat in enumerate(self.categories):
+            x = np.column_stack([np.ones(len(s)), s[:, j]])
+            _, coef, resid, sigma2 = _ols_ll(y, x)
+            xtx_inv = np.linalg.pinv(x.T @ x)
+            se = np.sqrt(np.diag(xtx_inv) * sigma2)
+            tstat = coef[1] / (se[1] + 1e-12)
+            r2 = 1.0 - float(np.var(resid) / (np.var(y) + 1e-12))
+            rows.append({
+                "category": cat,
+                "coefficient": float(coef[1]),
+                "std_error": float(se[1]),
+                "t_stat": float(tstat),
+                "p_value": float(1.0 - chi2.cdf(tstat ** 2, 1)),
+                "r_squared": r2,
+            })
+        return pd.DataFrame(rows)

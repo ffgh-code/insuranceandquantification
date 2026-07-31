@@ -278,7 +278,7 @@ GARCH-X条件波动率直接输入SCR计算。Solvency II采用99.5% VaR（1年�
 
 ### 11.4 三区制MS-GARCH与MSJ-GARCH
 
-V5.0将两区制模型扩展为平静/震荡/危机三区制，并支持货币政策、产业政策、就业、地缘政治四类情绪通道。统一MSJ-GARCH模型在同一似然中联合估计区制转移矩阵、GARCH参数、情绪通道与跳跃强度。完整估计结果见 `docs/ime_extension_results.json`，复现命令：
+V5.0将两区制模型扩展为平静/震荡/危机三区制，并支持货币政策、产业政策、就业、地缘政治四类情绪通道。统一MSJ-GARCH模型在同一似然中联合估计区制转移矩阵、GARCH参数、情绪通道与跳跃强度。V5.1补充了Student-t厚尾跳跃版本（MSJ-GARCH-t），AIC从6,554.1降至6,445.6，估计自由度7.8；单类新闻单独回归显示四类情绪通道均单独显著，用于佐证代理变量结论的稳健性。完整估计结果见 `docs/ime_extension_results.json`，复现命令：
 
 ```bash
 python scripts/ime_extension.py

@@ -16,7 +16,9 @@ coefficients is implemented (`model/category_heterogeneity.py`).
 ### 3. Unified Regime-Switching Jump-GARCH
 V5.0 estimates regime switching and compound Poisson jumps jointly in one
 likelihood (`model/msj_garch.py`), instead of comparing them as competing
-specifications.
+specifications. V5.1 adds a Student-t jump-distribution version
+(MSJ-GARCH-t) as a robustness check, with an estimated degrees-of-freedom
+parameter of 7.8 and improved AIC.
 
 ### 4. Real Industry Mortality Data
 The synthetic Lee-Carter series was removed. Mortality validation now uses the
@@ -48,6 +50,12 @@ Source weights (regulatory 1.0, sector news 0.7, market flash 0.4) remain
 domain-judgment based. Endogenous weight estimation is implemented for the
 aggregate index, and a full topic-level extension is left for future work.
 
+### 5. Single-Index Sample
+The empirical analysis uses the CSI 300 equity index only. Insurance
+asset-liability management allocates substantially to bonds, fixed-income-plus
+products, and other asset classes; a multi-asset MSJ-GARCH framework is left
+for future work.
+
 ## Future Work
 
 1. Expand the news corpus to topic-labelled daily headlines across 2018-2026
@@ -55,4 +63,5 @@ aggregate index, and a full topic-level extension is left for future work.
 2. Add CL(2025) and NBS census life tables to obtain a true mortality time
    series for Lee-Carter identification.
 3. Extend MSJ-GARCH to three regimes and alternative jump distributions.
-4. Extend the framework beyond CSI 300 to CSI 500/1000 and sector indices.
+4. Extend the framework beyond CSI 300 to bonds, fixed-income-plus products,
+   CSI 500/1000, and sector indices in a multi-asset MSJ-GARCH setting.

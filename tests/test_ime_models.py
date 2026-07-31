@@ -66,6 +66,17 @@ class TestMSJ:
         assert len(result["jump_intensities"]) == 2
         assert result["jump_intensities"]["jump_intensity"].between(0, 1).all()
 
+    def test_fit_msj_t(self, returns_and_sentiment):
+        from model.msj_garch import RegimeSwitchingJumpGARCH
+        returns, sentiment = returns_and_sentiment
+        model = RegimeSwitchingJumpGARCH(
+            n_regimes=2, category_names=list(sentiment.columns), jump_dist="t"
+        )
+        result = model.fit(returns, sentiment, n_iter=12)
+        assert np.isfinite(result["log_likelihood"])
+        assert result["degrees_of_freedom"] > 2
+        assert result["aic"] < np.inf
+
 
 class TestCategoryHeterogeneity:
     def test_estimate(self, returns_and_sentiment):
@@ -83,6 +94,14 @@ class TestCategoryHeterogeneity:
         out = test.likelihood_ratio(returns, sentiment)
         assert set(out) >= {"lr_stat", "df", "p_value", "reject_homogeneity"}
         assert out["df"] == len(sentiment.columns) - 1
+
+    def test_single_category_regressions(self, returns_and_sentiment):
+        from model.category_heterogeneity import CategoryHeterogeneityTest
+        returns, sentiment = returns_and_sentiment
+        test = CategoryHeterogeneityTest(categories=list(sentiment.columns))
+        table = test.single_category_regressions(returns, sentiment)
+        assert list(table["category"]) == list(sentiment.columns)
+        assert table["r_squared"].between(0, 1).all()
 
 
 class TestRealMortalityPanel:
