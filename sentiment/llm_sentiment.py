@@ -1,4 +1,4 @@
-﻿"""LLM-based sentiment analysis for financial news.
+"""LLM-based sentiment analysis for financial news.
 
 Uses OpenAI-compatible APIs to extract nuanced sentiment signals
 from financial text, including directional sentiment, magnitude,

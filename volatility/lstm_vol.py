@@ -1,4 +1,4 @@
-﻿"""LSTM-based volatility prediction with sentiment features.
+"""LSTM-based volatility prediction with sentiment features.
 
 Implements recurrent neural network models for volatility forecasting,
 with optional sentiment features as exogenous inputs.

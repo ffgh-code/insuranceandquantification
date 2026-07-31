@@ -1,4 +1,4 @@
-﻿"""Market data downloader supporting Chinese (akshare) and US (yfinance) markets.
+"""Market data downloader supporting Chinese (akshare) and US (yfinance) markets.
 
 Auto-detects market by ticker format:
 - sh/sz prefix -> akshare (Chinese markets)

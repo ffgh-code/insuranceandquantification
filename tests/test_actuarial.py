@@ -1,4 +1,4 @@
-﻿"""Tests for actuarial science modules."""
+"""Tests for actuarial science modules."""
 import sys
 from pathlib import Path
 import numpy as np

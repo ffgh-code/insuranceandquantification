@@ -1,4 +1,4 @@
-﻿"""Streamlit dashboard.
+"""Streamlit dashboard.
 
 Run with: streamlit run app/app.py
 """

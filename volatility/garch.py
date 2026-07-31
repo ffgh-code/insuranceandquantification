@@ -1,4 +1,4 @@
-﻿"""GARCH family models for volatility forecasting.
+"""GARCH family models for volatility forecasting.
 
 Implements standard GARCH, EGARCH, and GJR-GARCH models using
 the `arch` library, with support for exogenous variables (sentiment).

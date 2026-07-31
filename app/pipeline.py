@@ -1,4 +1,4 @@
-﻿"""Main application: Orchestrates the full sentiment-volatility pipeline.
+"""Main application: Orchestrates the full sentiment-volatility pipeline.
 
 This module ties together data fetching, sentiment analysis, volatility
 modeling, and strategy backtesting into a single workflow.
