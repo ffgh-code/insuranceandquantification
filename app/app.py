@@ -34,11 +34,10 @@ def get_pipeline():
     return Pipeline(ticker="sh000300")
 
 
-@st.cache_data(ttl=3600)
 def run_pipeline():
     pipeline = get_pipeline()
     results = pipeline.run_all()
-    return results, pipeline
+    return results
 
 
 def main():
@@ -123,7 +122,8 @@ def main():
             st.sidebar.error(f"导出失败：{str(e)[:80]}")
 
     with st.spinner("Running full analysis pipeline..."):
-        results, pipeline = run_pipeline()
+        results = run_pipeline()
+        pipeline = get_pipeline()
 
     pages = {
         "Overview": lambda: show_overview(results, pipeline),
