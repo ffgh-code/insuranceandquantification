@@ -485,3 +485,69 @@ def show_actuarial(pipeline):
 
 if __name__ == "__main__":
     main()
+
+def show_rolling_backtest(pipeline):
+    st.title("Rolling Window Backtest Report")
+    st.markdown("240-day window, monthly roll, 7:3 train/test split.")
+    from strategy.rolling_backtest import RollingWindowBacktest
+    import numpy as np
+    if pipeline._prices is not None and not pipeline._prices.empty:
+        prices = pipeline._prices["close"]
+        signals = pd.Series(np.random.randn(len(prices))*0.3, index=prices.index)
+        rbt = RollingWindowBacktest()
+        results = rbt.run(signals, prices)
+        if not results.empty:
+            st.dataframe(results, use_container_width=True)
+            c1, c2 = st.columns(2)
+            c1.metric("Avg Sharpe", f"{results['sharpe'].mean():.2f}")
+            c2.metric("Std Sharpe", f"{results['sharpe'].std():.2f}")
+    st.info("Replace synthetic signals with real strategy output for production use.")
+
+def show_regime_performance(pipeline):
+    st.title("Regime-Based Strategy Performance")
+    st.markdown("Bull / Bear / Range-bound market regime classification and per-regime backtest.")
+    from strategy.rolling_backtest import MarketRegimeClassifier
+    if pipeline._prices is not None and not pipeline._prices.empty:
+        mrc = MarketRegimeClassifier()
+        regime = mrc.classify(pipeline._prices["close"])
+        counts = regime.value_counts()
+        st.bar_chart(counts)
+        st.caption("Regime classification: Bull (>8%/60d), Bear (<-5%/60d), Range (otherwise).")
+    st.info("A-share Sharpe is structurally lower than US due to: price limits, short-sale restrictions, retail dominance (80%+ volume), and policy-driven regime shifts.")
+
+def show_solvency_simulation(pipeline):
+    st.title("Solvency II / C-ROSS Dynamic Simulation")
+    st.markdown("GARCH volatility -> SCR automatic calculation + stress test.")
+    from actuarial.solvency import SolvencyCalculator
+    sc = SolvencyCalculator()
+    if pipeline._garch_result is not None:
+        cv = pipeline._garch_result.get("conditional_volatility")
+        if cv is not None and not cv.empty:
+            sc.set_volatility_input(cv)
+            scr_df = sc.compute_market_risk_scr()
+            st.line_chart(scr_df.set_index("date")[["scr_solvency_ii", "scr_cross"]] if "date" in scr_df.columns else scr_df)
+            stress = sc.stress_test_extreme_sentiment(1.5)
+            st.dataframe(stress, use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        vol = st.slider("Volatility for manual test", 0.05, 0.60, 0.20, 0.01)
+    with col2:
+        cap = st.number_input("Capital Base", 1e6, 1e9, 1e8, step=1e6)
+    var = SolvencyCalculator.calculate_var(vol, 0.995)
+    st.metric("VaR 99.5%\ of Capital", f"\")
+
+def show_reserving_comparison(pipeline):
+    st.title("Loss Reserving: Static vs Dynamic")
+    st.markdown("Comparing static 35% provisioning vs volatility-adjusted dynamic reserving.")
+    from actuarial.loss_modeling import LossReserving
+    lr = LossReserving()
+    data = lr.load()
+    vol_series = pipeline._garch_result.get("conditional_volatility") if pipeline._garch_result else None
+    comp = lr.compare(data, vol_series)
+    st.dataframe(comp, use_container_width=True)
+    if vol_series is not None:
+        diff = lr.diff_chart(vol_series)
+        if not diff.empty and "diff" in diff.columns:
+            st.subheader("Reserve Difference Over Years")
+            st.bar_chart(diff.set_index("year")[["static","dynamic"]])
+    st.caption("Dynamic reserving smooths profit volatility by increasing reserves in high-volatility periods and releasing them in low-volatility periods.")

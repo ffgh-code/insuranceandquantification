@@ -244,3 +244,29 @@ class MarketRegimeClassifier:
                     "n_days": int(mask.sum()),
                 }
         return results
+import matplotlib.pyplot as plt
+    @staticmethod
+    def plot_monthly_returns_histogram(monthly_df, save_path=None):
+        """Plot monthly return distribution histogram with statistics overlay."""
+        fig, ax = plt.subplots(figsize=(10, 5))
+        returns = monthly_df["monthly_return"].dropna() * 100
+        ax.hist(returns, bins=25, color="steelblue", edgecolor="white", alpha=0.7)
+        ax.axvline(returns.mean(), color="red", linestyle="--", label=f"Mean: {returns.mean():.2f}%")
+        ax.axvline(0, color="gray", linestyle="-", alpha=0.5)
+        ax.set_xlabel("Monthly Return (%)")
+        ax.set_ylabel("Frequency")
+        ax.set_title("Monthly Return Distribution")
+        ax.legend()
+        stats_text = f"Std: {returns.std():.2f}%\\nSkew: {returns.skew():.2f}\\nKurt: {returns.kurtosis():.2f}"
+        ax.text(0.95, 0.95, stats_text, transform=ax.transAxes, va="top", ha="right",
+                bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5))
+        plt.tight_layout()
+        if save_path: plt.savefig(save_path, dpi=150)
+        return fig
+    def monthly_returns_histogram(self):
+        """Generate monthly return histogram from the last equity curve."""
+        if not self.results: return None
+        eq = self.results[-1].get("equity_curve", pd.Series(dtype=float))
+        if eq.empty: return None
+        monthly = self.monthly_returns_distribution(eq)
+        return self.plot_monthly_returns_histogram(monthly)
