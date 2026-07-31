@@ -1,0 +1,39 @@
+# ============================================================
+# Global Configuration for Sentiment-Vol Lab
+# All hyperparameters, window sizes, fee rates, data paths
+# ============================================================
+
+backtest:
+  window_size: 240
+  step_size: 20
+  train_ratio: 0.7
+  transaction_cost: 0.001
+  slippage: 0.0005
+  initial_capital: 1000000
+
+data:
+  china_index: "000300"
+  cache_dir: "data/processed"
+  n_days: 756
+  trading_days: 242
+
+sentiment:
+  source_weights:
+    regulatory: 1.0
+    sector: 0.7
+    market: 0.4
+
+volatility:
+  garch_p: 1
+  garch_q: 1
+  lstm_epochs: 100
+  transformer_epochs: 80
+
+actuarial:
+  capital_base: 100000000
+  scr_confidence: 0.995
+  stress_shock: 1.5
+
+output:
+  charts_dir: "output/charts"
+  reports_dir: "output/reports"
