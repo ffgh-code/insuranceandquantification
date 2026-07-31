@@ -25,7 +25,12 @@ class LossReserving:
         last = data["total_loss"].iloc[-1]
         static = last * 0.35
         if volatility is not None and not volatility.empty:
-            r = volatility.iloc[-1] / max(volatility.median(), 1e-6)
+            if isinstance(volatility, pd.DataFrame):
+                vol_series = volatility.iloc[:, 0]
+            else:
+                vol_series = volatility
+            r = float(np.asarray(vol_series.iloc[-1]).ravel()[0]) / max(
+                float(np.asarray(vol_series.median()).ravel()[0]), 1e-6)
             dr = max(0.25, min(0.50, 0.35 * r))
             dynamic = last * dr
         else:
@@ -35,12 +40,29 @@ class LossReserving:
     def diff_chart(self, volatility=None):
         data = self.load()
         if data.empty: return pd.DataFrame()
-        y = data.groupby(data["date"].dt.year).agg(total=("total_loss","sum")).reset_index()
+        y = data.copy()
+        y["year"] = y["date"].dt.year
+        y = y.groupby("year").agg(total=("total_loss","sum")).reset_index()
         if volatility is not None and not volatility.empty:
-            b = volatility.median()
-            y["dr"] = y.year.apply(lambda yr: max(0.25, min(0.50, 0.35 * (
-                volatility.loc[volatility.index.year == yr].mean() / b
-                if not volatility.loc[volatility.index.year == yr].empty else 1.0))))
+            # Handle both Series and DataFrame volatility input
+            if isinstance(volatility, pd.DataFrame):
+                vol_series = volatility.iloc[:, 0]
+            else:
+                vol_series = volatility
+            b = float(np.asarray(vol_series.median()).ravel()[0])
+            # Convert volatility to DataFrame with year column for safe lookup
+            vol_df = pd.DataFrame({"date": pd.to_datetime(vol_series.index)})
+            vol_df["vol"] = np.asarray(vol_series.values).ravel()
+            vol_df["year"] = vol_df["date"].dt.year
+            yearly_vol = vol_df.groupby("year")["vol"].mean()
+
+            def _dyn_ratio(yr):
+                if yr in yearly_vol.index:
+                    ratio = float(np.asarray(yearly_vol[yr]).ravel()[0]) / b
+                    return max(0.25, min(0.50, 0.35 * ratio))
+                return 0.35
+
+            y["dr"] = y["year"].apply(_dyn_ratio)
             y["static"] = y.total * 0.35
             y["dynamic"] = y.total * y.dr
             y["diff"] = y.static - y.dynamic

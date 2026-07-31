@@ -58,7 +58,11 @@ def main():
             "Volatility Models",
            "Strategy Backtest",
             "Actuarial Applications",
-           "Full Pipeline",
+            "Rolling Backtest Report",
+            "Regime Performance",
+            "Solvency Simulation",
+            "Reserving Comparison",
+            "Full Pipeline",
         ],
     )
 
@@ -79,7 +83,11 @@ def main():
         "Volatility Models": lambda: show_volatility(pipeline),
        "Strategy Backtest": lambda: show_strategy(pipeline),
         "Actuarial Applications": lambda: show_actuarial(pipeline),
-       "Full Pipeline": lambda: show_full_pipeline(results),
+        "Rolling Backtest Report": lambda: show_rolling_backtest(pipeline),
+        "Regime Performance": lambda: show_regime_performance(pipeline),
+        "Solvency Simulation": lambda: show_solvency_simulation(pipeline),
+        "Reserving Comparison": lambda: show_reserving_comparison(pipeline),
+        "Full Pipeline": lambda: show_full_pipeline(results),
     }
     pages[page]()
 
@@ -350,32 +358,15 @@ def show_actuarial(pipeline):
         if pipeline._garch_result is not None:
             cond_vol = pipeline._garch_result.get("conditional_volatility")
             if cond_vol is not None and not cond_vol.empty:
-                report = sc.generate_report(cond_vol, available_capital=120_000_000)
-
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Current Vol", f"{report['current_vol']:.2%}")
-                c2.metric("Solvency II SCR", f"${report['latest_scr']:,.0f}")
-                c3.metric("C-ROSS SCR", f"${report['cross_scr']:,.0f}")
-
-                if "capital_adequacy" in report:
-                    c4, c5 = st.columns(2)
-                    c4.metric("Capital Adequacy", f"{report['capital_adequacy']:.1f}%")
-                    c5.metric("Peak SCR", f"${report['peak_scr']:,.0f}")
-
-                market_risk = sc.scratch_market_risk(cond_vol)
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=market_risk.index, y=market_risk["scr_market"],
-                    mode="lines", name="SCR",
-                    line=dict(color="royalblue", width=2)
-                ))
-                fig.add_trace(go.Scatter(
-                    x=market_risk.index, y=market_risk["mcr_market"],
-                    mode="lines", name="MCR",
-                    line=dict(color="orange", width=1.5, dash="dot")
-                ))
-                fig.update_layout(height=300, yaxis_title="Capital ($)")
-                st.plotly_chart(fig, use_container_width=True)
+                sc.set_volatility_input(cond_vol)
+                scr_df = sc.compute_market_risk_scr()
+                if not scr_df.empty:
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Current Vol", f"{cond_vol.iloc[-1]:.2%}")
+                    c2.metric("Solvency II SCR", f"${scr_df['scr_solvency_ii'].iloc[-1]:,.0f}")
+                    c3.metric("C-ROSS SCR", f"${scr_df['scr_cross'].iloc[-1]:,.0f}")
+                    stress = sc.stress_test_extreme_sentiment(1.5)
+                    st.dataframe(stress, use_container_width=True)
 
         c1, c2 = st.columns(2)
         with c1:
@@ -398,26 +389,14 @@ def show_actuarial(pipeline):
             "Applying volatility models to insurance claim data for loss reserving."
         )
 
-        from actuarial.loss_modeling import LossModeler
-        lm = LossModeler()
-        claim_data = lm.generate_claim_data()
-
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=claim_data["date"], y=claim_data["total_loss"],
-            name="Total Loss", marker_color="royalblue", opacity=0.7
-        ))
-        fig.add_trace(go.Scatter(
-            x=claim_data["date"], y=claim_data["cumulative_paid"],
-            mode="lines+markers", name="Cumulative Paid",
-            line=dict(color="orange", width=2)
-        ))
-        fig.update_layout(height=300, yaxis_title="Loss ($)")
-        st.plotly_chart(fig, use_container_width=True)
-
-        comparison = lm.compare_reserving_methods(claim_data)
-        st.subheader("Reserving Method Comparison")
-        st.dataframe(comparison, use_container_width=True, hide_index=True)
+        from actuarial.loss_modeling import LossReserving
+        lr = LossReserving()
+        data = lr.load()
+        vol_series = None
+        if pipeline._garch_result is not None:
+            vol_series = pipeline._garch_result.get("conditional_volatility")
+        comp = lr.compare(data, vol_series)
+        st.dataframe(comp, use_container_width=True, hide_index=True)
 
     with tab3:
         st.subheader("Mortality Improvement Rate Forecasting")
@@ -427,64 +406,13 @@ def show_actuarial(pipeline):
 
         from actuarial.mortality import MortalityForecaster
         mf = MortalityForecaster()
-        mort_data = mf.generate_mortality_data(n_years=50)
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=mort_data["date"], y=mort_data["mortality_rate"],
-            mode="lines", name="Mortality Rate",
-            line=dict(color="royalblue", width=2)
-        ))
-        fig.add_trace(go.Scatter(
-            x=mort_data["date"], y=mort_data["volatility"],
-            mode="lines", name="Volatility",
-            line=dict(color="orange", width=1.5, dash="dot"),
-            yaxis="y2"
-        ))
-        fig.update_layout(
-            height=300,
-            yaxis_title="Mortality Rate",
-            yaxis2=dict(title="Volatility", overlaying="y", side="right"),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        lc_forecast = mf.lee_carter_forecast(mort_data["log_mortality"], 10)
-
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(
-            x=mort_data["date"], y=mort_data["mortality_rate"],
-            mode="lines", name="Historical",
-            line=dict(color="royalblue")
-        ))
-        forecast_dates = pd.date_range(
-            start=mort_data["date"].iloc[-1] + pd.Timedelta(days=365),
-            periods=10, freq="YE"
-        )
-        fig2.add_trace(go.Scatter(
-            x=forecast_dates, y=lc_forecast["forecast_mortality"],
-            mode="lines+markers", name="Forecast",
-            line=dict(color="red", dash="dash")
-        ))
-        fig2.add_trace(go.Scatter(
-            x=forecast_dates, y=lc_forecast["upper_95"],
-            mode="lines", name="Upper 95%",
-            line=dict(color="red", width=0), showlegend=False
-        ))
-        fig2.add_trace(go.Scatter(
-            x=forecast_dates, y=lc_forecast["lower_95"],
-            mode="lines", name="Lower 95%",
-            line=dict(color="red", width=0), fillcolor="rgba(255,0,0,0.1)",
-            fill="tonexty", showlegend=False
-        ))
-        fig2.update_layout(height=300, yaxis_title="Mortality Rate")
-        st.plotly_chart(fig2, use_container_width=True)
-
-        st.subheader("Method Comparison")
-        comp = mf.compare_forecast_methods(mort_data, 10)
-        st.dataframe(comp, use_container_width=True, hide_index=True)
-
-if __name__ == "__main__":
-    main()
+        mort_data = mf.load()
+        lc, rs = mf.lee_carter(mort_data)
+        lcg = mf.lc_garch(mort_data)
+        st.dataframe(mf.compare(), use_container_width=True, hide_index=True)
+        c1, c2 = st.columns(2)
+        c1.metric("Lee-Carter 10yr", f"{lc[-1]:.6f}")
+        c2.metric("GARCH-LC 10yr", f"{lcg['fc'][-1]:.6f}")
 
 def show_rolling_backtest(pipeline):
     st.title("Rolling Window Backtest Report")
@@ -551,3 +479,7 @@ def show_reserving_comparison(pipeline):
             st.subheader("Reserve Difference Over Years")
             st.bar_chart(diff.set_index("year")[["static","dynamic"]])
     st.caption("Dynamic reserving smooths profit volatility by increasing reserves in high-volatility periods and releasing them in low-volatility periods.")
+
+
+if __name__ == "__main__":
+    main()

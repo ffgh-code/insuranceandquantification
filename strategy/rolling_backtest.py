@@ -244,7 +244,6 @@ class MarketRegimeClassifier:
                     "n_days": int(mask.sum()),
                 }
         return results
-import matplotlib.pyplot as plt
     @staticmethod
     def plot_monthly_returns_histogram(monthly_df, save_path=None):
         """Plot monthly return distribution histogram with statistics overlay."""
