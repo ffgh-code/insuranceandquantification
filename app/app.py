@@ -29,6 +29,67 @@ st.markdown(
 )
 
 
+def generate_pdf_report(page_name: str, results: dict) -> bytes:
+    """Generate a compact PDF report for the current page."""
+    try:
+        from fpdf import FPDF
+        import io
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.cell(0, 10, "Sentiment-Enhanced Volatility Lab", align="C",
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(0, 7, f"Page: {page_name}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, f"Generated: {datetime.now():%Y-%m-%d %H:%M}",
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 7, "Key Metrics", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 9)
+        if results and "data" in results:
+            d = results["data"]
+            pdf.cell(0, 5, f"Ticker: {d.get('ticker', 'sh000300')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"Observations: {d.get('n_observations', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"Current Price: {d.get('current_price', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"Current Vol: {d.get('current_vol', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+        if results and "sentiment" in results:
+            s = results["sentiment"]
+            pdf.cell(0, 5, f"Headlines: {s.get('n_headlines', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"LLM Sentiment: {s.get('llm_avg_sentiment', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+        if results and "strategy" in results:
+            st2 = results["strategy"]
+            pdf.cell(0, 5, f"Best Strategy: {st2.get('best_strategy', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"Sharpe: {st2.get('best_sharpe', '-')}",
+                     new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(4)
+        pdf.set_font("Helvetica", "", 8)
+        pdf.cell(0, 5, "GitHub: https://github.com/ffgh-code/insuranceandquantification",
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, "Demo: https://insuranceandquantification-fbmyvwetabtki2r5m8krac.streamlit.app/",
+                 new_x="LMARGIN", new_y="NEXT")
+        return bytes(pdf.output(dest="S"))
+    except Exception:
+        # Minimal valid PDF fallback so the download button always renders
+        try:
+            from fpdf import FPDF
+            import io
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(0, 8, "Report generation failed", new_x="LMARGIN", new_y="NEXT")
+            return bytes(pdf.output(dest="S"))
+        except Exception:
+            return b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n190\n%%EOF"
+
+
 @st.cache_resource
 def get_pipeline():
     return Pipeline(ticker="sh000300")
@@ -72,10 +133,18 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.caption(f"Last update: {datetime.now():%Y-%m-%d %H:%M}")
 
-
     with st.spinner("Running full analysis pipeline..."):
         results = run_pipeline()
         pipeline = get_pipeline()
+
+    st.sidebar.markdown("---")
+    st.sidebar.caption("**PDF 报告导出**")
+    st.sidebar.download_button(
+        "导出当前页面 PDF",
+        data=generate_pdf_report(page, results),
+        file_name=f"{page.replace(' | ', '_')}_{datetime.now():%Y%m%d}.pdf",
+        mime="application/pdf",
+    )
 
     pages = {
         "数据预览 | Overview": lambda: show_overview(results, pipeline),

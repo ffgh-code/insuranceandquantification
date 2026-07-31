@@ -182,7 +182,7 @@ class TestVolatility:
         import warnings
         warnings.filterwarnings("ignore")
         vol = pd.Series(np.random.randn(300) * 0.2 + 0.15)
-        lstm = LSTMVolatility(epochs=10, hidden_size=32, verbose=False)
+        lstm = LSTMVolatility(epochs=10, hidden_size=32)
         try:
             result = lstm.fit(vol, verbose=False)
             assert "train_losses" in result
