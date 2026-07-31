@@ -51,37 +51,18 @@ def main():
     page = st.sidebar.radio(
         "五大板块",
         [
-            # 数据预览
-            "Overview",
-            "Market Data",
-            # 舆情可视化
-            "Sentiment Analysis",
-            # 模型拟合结果
-            "Volatility Models",
-            # 回测报表
-            "Strategy Backtest",
-            "Rolling Backtest Report",
-            "Regime Performance",
-            # 精算测算面板
-            "Actuarial Applications",
-            "Solvency Simulation",
-            "Reserving Comparison",
-            # 全流程
-            "Full Pipeline",
+            "数据预览 | Overview",
+            "数据预览 | Market Data",
+            "舆情可视化 | Sentiment",
+            "模型拟合 | Volatility",
+            "回测报表 | Strategy",
+            "回测报表 | Rolling Window",
+            "回测报表 | Regime",
+            "精算面板 | Actuarial",
+            "精算面板 | Solvency",
+            "精算面板 | Reserving",
+            "全流程 | Full Pipeline",
         ],
-        format_func=lambda x: {
-            "Overview": "数据预览 - 总览",
-            "Market Data": "数据预览 - 行情与波动率",
-            "Sentiment Analysis": "舆情可视化 - 情绪分析",
-            "Volatility Models": "模型拟合结果 - GARCH/LSTM",
-            "Strategy Backtest": "回测报表 - 策略对比",
-            "Rolling Backtest Report": "回测报表 - 滚动窗口",
-            "Regime Performance": "回测报表 - 行情分区",
-            "Actuarial Applications": "精算测算面板 - 总览",
-            "Solvency Simulation": "精算测算面板 - 偿付能力",
-            "Reserving Comparison": "精算测算面板 - 准备金",
-            "Full Pipeline": "全流程结果",
-        }.get(x, x),
     )
 
     st.sidebar.markdown("---")
@@ -126,17 +107,17 @@ def main():
         pipeline = get_pipeline()
 
     pages = {
-        "Overview": lambda: show_overview(results, pipeline),
-        "Market Data": lambda: show_market_data(pipeline),
-        "Sentiment Analysis": lambda: show_sentiment(pipeline),
-        "Volatility Models": lambda: show_volatility(pipeline),
-       "Strategy Backtest": lambda: show_strategy(pipeline),
-        "Actuarial Applications": lambda: show_actuarial(pipeline),
-        "Rolling Backtest Report": lambda: show_rolling_backtest(pipeline),
-        "Regime Performance": lambda: show_regime_performance(pipeline),
-        "Solvency Simulation": lambda: show_solvency_simulation(pipeline),
-        "Reserving Comparison": lambda: show_reserving_comparison(pipeline),
-        "Full Pipeline": lambda: show_full_pipeline(results),
+        "数据预览 | Overview": lambda: show_overview(results, pipeline),
+        "数据预览 | Market Data": lambda: show_market_data(pipeline),
+        "舆情可视化 | Sentiment": lambda: show_sentiment(pipeline),
+        "模型拟合 | Volatility": lambda: show_volatility(pipeline),
+        "回测报表 | Strategy": lambda: show_strategy(pipeline),
+        "回测报表 | Rolling Window": lambda: show_rolling_backtest(pipeline),
+        "回测报表 | Regime": lambda: show_regime_performance(pipeline),
+        "精算面板 | Actuarial": lambda: show_actuarial(pipeline),
+        "精算面板 | Solvency": lambda: show_solvency_simulation(pipeline),
+        "精算面板 | Reserving": lambda: show_reserving_comparison(pipeline),
+        "全流程 | Full Pipeline": lambda: show_full_pipeline(results),
     }
     pages[page]()
 
