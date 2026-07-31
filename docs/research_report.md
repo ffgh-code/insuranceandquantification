@@ -3,217 +3,214 @@
 
 ---
 
-## Abstract
+## 摘要
 
-This report presents a quantitative finance framework that combines LLM-powered sentiment analysis with GARCH and LSTM volatility models, applied to the CSI 300 index. The system integrates dual-branch data pipelines (akshare with synthetic fallback), four realized volatility estimators, GARCH family models with sentiment exogenous variables, a lightweight attention Transformer, rolling-window backtesting with cross-sectional multi-factor selection, and three actuarial extensions (Solvency II/C-ROSS capital calculation, dynamic loss reserving, GARCH-enhanced Lee-Carter mortality forecasting). Empirical results show that combining sentiment and volatility signals achieves a Sharpe ratio of 0.43, and that A-share market microstructure differences explain the performance gap with US markets.
+本报告构建了一个融合大语言模型（LLM）情绪分析与波动率预测的量化研究框架，并以中国A股市场沪深300指数为实证对象。系统集成双分支数据管道（akshare实时数据与合成数据兜底）、四种已实现波动率估计量、GARCH族模型、轻量级注意力Transformer、滚动窗口回测与横截面多因子选股框架，并扩展了三大精算应用：Solvency II / C-ROSS偿付能力计算、动态损失准备金建模、GARCH增强死亡率预测。
 
----
-
-## 1. Introduction
-
-Volatility is the single most important variable in quantitative finance. It determines option prices, drives position sizing, and dictates risk management decisions. Since Bollerslev (1986) introduced the GARCH model, volatility forecasting has been central to financial econometrics.
-
-Two key limitations exist in current practice. First, traditional volatility models use only historical price data, ignoring market sentiment. Second, most academic research focuses on US markets, with limited attention to Chinese A-share market microstructure.
-
-This research addresses both gaps by: (1) incorporating LLM-derived sentiment signals into GARCH-X models as exogenous variables; (2) applying the framework to real CSI 300 Chinese market data; (3) extending the volatility framework to actuarial applications including solvency capital calculation and mortality forecasting.
+实证结果表明：GARCH(1,1)在沪深300真实数据上AIC为2,030，拟合有效；综合情绪-波动率策略的夏普比率为0.43，优于纯波动率均值回归策略（0.35）与纯情绪驱动策略（0.28）。进一步分析发现，A股策略表现低于美股同类模型的根本原因在于市场微观结构差异：涨跌停制度、做空限制和散户主导的交易结构。本报告同时讨论了模型局限性及中长期迭代规划。
 
 ---
 
-## 2. Literature Review
+## 1. 引言
 
-### 2.1 Volatility Modeling
+波动率是量化金融中最重要的变量。它决定期权定价、驱动头寸规模、影响风险管理决策。自Bollerslev（1986）提出GARCH模型以来，波动率预测一直是金融计量经济学的研究核心。
 
-The GARCH family provides the standard toolkit for volatility forecasting. The standard GARCH(1,1) model (Bollerslev, 1986) captures volatility clustering - the tendency for large changes to be followed by large changes. Nelson (1991) proposed EGARCH to handle asymmetric volatility (the leverage effect), while Glosten, Jagannathan and Runkle (1993) introduced GJR-GARCH.
+当前实践存在两个关键局限：第一，传统波动率模型仅使用历史价格数据，完全忽略市场情绪这一重要信息源；第二，学术界研究高度集中于美国市场，对中国A股市场的关注相对不足。
 
-Realized volatility estimation has evolved from simple close-to-close standard deviation to more efficient estimators. Parkinson (1980) proposed a high-low estimator that is 5x more efficient than close-to-close. Garman and Klass (1980) incorporated all four OHLC prices for 7x efficiency. Yang and Zhang (2000) developed a drift-independent estimator that handles overnight jumps.
-
-### 2.2 Sentiment in Finance
-
-Tetlock (2007) demonstrated that media sentiment predicts stock market movements. More recently, LLMs have enabled more nuanced sentiment extraction. The innovation of this project is treating LLM sentiment as a structured exogenous variable for GARCH-X modeling, rather than as a standalone trading signal.
-
-### 2.3 Deep Learning for Time Series
-
-The Transformer architecture (Vaswani et al., 2017) has been adapted for time series forecasting. The self-attention mechanism captures long-range dependencies that LSTM models struggle with. This project implements both LSTM and Transformer for comparison with traditional GARCH models.
-
-### 2.4 Chinese Market Microstructure
-
-Chinese A-share markets have unique characteristics: price limit rules (10% daily cap), restricted short selling, retail investor dominance (80%+ of volume), and frequent government policy interventions. These factors fundamentally affect volatility dynamics and strategy performance.
+本研究针对上述两个缺口展开工作：
+- 将LLM提取的情绪信号作为GARCH-X模型的外生变量，检验情绪对波动率的增量预测能力；
+- 将完整框架应用于沪深300真实行情数据，揭示A股市场特有的波动率动态特征；
+- 将波动率建模框架延伸至保险精算领域，包括偿付能力资本计算与死亡率预测。
 
 ---
 
-## 3. Data
+## 2. 研究背景与文献简述
 
-### 3.1 Architecture
+### 2.1 波动率建模文献
 
-All data modules employ a dual-branch design:
-- Branch A (Local): Real API calls via akshare with parquet caching
-- Branch B (Demo): Synthetic data generation when APIs are unavailable
+GARCH族模型构成波动率预测的标准工具箱。Bollerslev（1986）提出的GARCH(1,1)模型能够捕捉波动率聚集效应——大波动之后通常跟随大波动。Nelson（1991）提出EGARCH处理非对称波动率（杠杆效应），Glosten、Jagannathan和Runkle（1993）提出GJR-GARCH模型，引入负向冲击的独立系数。
 
-### 3.2 Market Data
+已实现波动率估计经历了从简单到高效的演进。Parkinson（1980）提出高低价估计量，效率约为收盘价估计量的5倍；Garman和Klass（1980）利用全部OHLC价格实现约7倍效率提升；Yang和Zhang（2000）开发了不受漂移影响的估计量，可处理隔夜跳空。
 
-| Source | Symbol | Period | Frequency | Records |
-|--------|--------|--------|-----------|---------|
-| akshare | sh000300 (CSI 300) | 2024-2026 | Daily | 727 days |
-| akshare | Index constituents | Latest | Static | 300 stocks |
-| Synthetic | 5-min bars | 2024-2026 | 5-minute | 48/day |
+### 2.2 情绪与金融市场文献
 
-Trading days: 242/year (A-share standard, vs 252 for US).
+Tetlock（2007）证明了媒体情绪对股票市场的预测能力。后续研究进一步表明，新闻情绪与波动率之间存在格兰杰因果关系。大语言模型的出现使得从非结构化文本中提取精细情绪信号成为可能，这是传统词典方法（如VADER）难以企及的。
 
-### 3.3 Sentiment Data
+本项目的创新在于：将LLM情绪作为结构化外生变量纳入GARCH-X模型，而非仅作为独立的交易信号。
 
-20 Chinese financial headlines covering: monetary policy, industrial policy, macro employment, and geopolitics. Source-weighted (regulatory 1.0, sector news 0.7, market flash 0.4). Positive and negative sentiment extracted as separate time series.
+### 2.3 深度学习方法
 
-### 3.4 Synthetic Fallback
+Transformer架构（Vaswani et al., 2017）通过自注意力机制捕捉序列中的长程依赖关系，已被广泛用于时间序列预测。本项目同时实现LSTM与单层注意力Transformer，与GARCH族模型形成对比。
 
-When APIs are unavailable, realistic synthetic data is generated using GBM with stochastic volatility. Mortality data follows Lee-Carter assumptions. Claim data follows lognormal frequency-severity patterns.
+### 2.4 A股市场微观结构
+
+中国A股市场具有独特的制度特征：每日10%涨跌停限制、融资融券做空限制、散户交易占比超过80%、政策干预频繁。这些因素从根本上改变了波动率动态特征和策略有效性边界。
 
 ---
 
-## 4. Methodology
+## 3. 数据源说明
 
-### 4.1 Sentiment Analysis
+### 3.1 数据架构
 
-Dual-approach design:
-- Primary: LLM API (OpenAI-compatible) with structured JSON output
-- Fallback: Financial lexicon with 40+ positive and 30+ negative weighted terms
-- Baseline: VADER lexicon-based comparison
+所有数据模块采用双分支设计：
+- Branch A（本地环境）：通过akshare获取真实数据，自动缓存为parquet文件；
+- Branch B（离线/云端测试）：检测缓存不存在时生成模拟数据，保证流程可演示。
 
-Key innovation: Source-weighted aggregation and Granger causality testing between sentiment and volatility series.
+### 3.2 市场数据
 
-### 4.2 Volatility Models
+| 数据源 | 代码 | 周期 | 频率 | 记录数 |
+|--------|------|------|------|--------|
+| akshare | sh000300（沪深300） | 2024-2026 | 日线 | 727天 |
+| akshare | 沪深300成分股 | 最新 | 静态 | 300只 |
+| 合成 | 5分钟K线 | 2024-2026 | 5分钟 | 每日48根 |
 
-Four realized volatility estimators:
+交易日采用A股标准242天/年（美股为252天）。
+
+### 3.3 情绪数据
+
+20条中文财经头条，覆盖货币政策、产业政策、宏观就业、地缘政治四大类。来源权重设计：监管公告（1.0）> 行业头条（0.7）> 市场快讯（0.4）。正向与负向情绪分别提取为独立时间序列。
+
+### 3.4 合成数据兜底
+
+当API不可用时，使用带随机波动率的几何布朗运动生成合成行情数据。死亡率数据遵循Lee-Carter假设，理赔数据遵循对数正态频率-严重度模式。
+
+---
+
+## 4. 模型方法论
+
+### 4.1 情绪分析
+
+情绪模块采用双轨设计：
+- 主方法：LLM API（兼容OpenAI），通过结构化prompt输出评分（-1至+1）、方向、话题和置信度；
+- 回退方法：金融词典（40+正面词汇、30+负面词汇，按强度加权）；
+- 基线方法：VADER词典对比。
+
+关键创新：来源加权聚合、正负情绪拆分、Granger因果检验。
+
+### 4.2 波动率模型
+
+四种已实现波动率估计量：
 1. Close-to-Close: sigma = std(log(P_t / P_{t-1}))
 2. Parkinson: sigma = sqrt((1/(4*log(2))) * (log(H/L))^2)
 3. Garman-Klass: sigma = sqrt(0.5*(log(H/L))^2 - (2*log(2)-1)*(log(C/O))^2)
-4. Yang-Zhang: Drift-independent, OHLC-based
+4. Yang-Zhang: 不受漂移影响，处理隔夜跳空
 
-GARCH family:
-- GARCH(1,1): sigma_t^2 = omega + alpha*epsilon_{t-1}^2 + beta*sigma_{t-1}^2
-- EGARCH: log(sigma_t^2) with asymmetric leverage term
-- GJR-GARCH: Separate coefficient for negative shocks
-- GARCH-X: Above models with exogenous sentiment variable
+GARCH族：
+- GARCH(1,1): sigma_t^2 = omega + alpha*epsilon^2 + beta*sigma^2
+- EGARCH: log(sigma_t^2)含非对称杠杆项
+- GJR-GARCH: 负向冲击独立系数
+- GARCH-X: 以上模型加入情绪外生变量
 
-Deep learning:
-- LSTM: 2 layers, 64 hidden units, 60-day sequence
-- Transformer: Single encoder layer, 4-head attention, 32-dim embedding
+深度学习：
+- LSTM: 2层、64隐藏单元、60天序列
+- Transformer: 单层编码器、4头注意力、32维嵌入
 
-### 4.3 Strategy Backtesting
+### 4.3 回测框架
 
-Baseline: Rolling window (240-day window, monthly refit), 7:3 train/test split. Transaction cost 0.1%, slippage 0.05%.
+基线设定：滚动窗口240个交易日，按月滚动更新模型参数，7:3训练/测试划分。交易成本0.1%，滑点0.05%。
 
-Four strategies: volatility mean reversion, pure sentiment-driven, combined (both signals agree), volatility risk premium.
+四种策略：波动率均值回归、纯情绪驱动、综合策略（双信号一致）、波动率风险溢价。
 
-Cross-sectional extension: All 300 CSI 300 constituents, monthly rebalancing, IC/IR factor evaluation.
+横截面扩展：全部300只成分股、月度调仓、IC/IR因子评价。
 
-### 4.4 Market Regime Classification
+### 4.4 市场状态分类
 
-Three regimes: Bull (>8% return over 60 days), Bear (<-5%), Range-bound (otherwise). Strategies backtested separately per regime.
-
----
-
-## 5. Empirical Results
-
-### 5.1 Model Performance
-
-| Model | AIC | BIC | Residual Test |
-|-------|-----|-----|---------------|
-| GARCH(1,1) | 2,030 | 2,048 | White noise |
-| ARIMA(2,1,2) | -530 | -512 | White noise |
-| GARCH-X | Pending | Pending | With sentiment |
-
-GARCH conditional volatility closely tracks Yang-Zhang realized volatility, indicating the model captures main volatility dynamics.
-
-### 5.2 Strategy Performance
-
-| Strategy | Sharpe | Return | Max DD | Win Rate |
-|----------|--------|--------|--------|----------|
-| Combined | 0.43 | +5.2% | -8.2% | 54% |
-| Vol Mean Rev | 0.35 | +4.1% | -6.5% | 52% |
-| Sentiment | 0.28 | +3.3% | -7.1% | 51% |
-| Risk Premium | 0.20 | +2.4% | -9.8% | 48% |
-
-The combined strategy outperforms individual approaches, confirming complementary information in sentiment and volatility signals.
-
-### 5.3 A-Share vs US Market Analysis
-
-The A-share Sharpe ratio (0.43) is significantly lower than typical US market results (1.03+). Key structural factors:
-
-1. **Price Limit Rules**: The 10% daily price cap truncates extreme returns, reducing the volatility that mean-reversion strategies exploit. In US markets, the absence of daily limits allows full price discovery.
-
-2. **Short-Selling Restrictions**: Only designated marginable stocks can be shorted, and short-selling volume is limited. This prevents arbitrage strategies from correcting mispricing, reducing strategy effectiveness.
-
-3. **Retail Dominance**: Retail investors account for over 80% of trading volume in A-shares, compared to ~20% in US markets. Retail trading introduces momentum-chasing behavior and higher noise, reducing the signal-to-noise ratio for quantitative strategies.
-
-4. **Policy Interventions**: Government policy changes create regime shifts that invalidate statistical patterns. The CSI 300 shows stronger trending behavior and weaker mean reversion than the S&P 500.
-
-### 5.4 Cross-Sectional Factor Analysis
-
-IC/IR results across 300 CSI 300 constituents:
-
-| Factor | IC | IR | p-value | Significant |
-|--------|-----|-----|---------|-------------|
-| Volatility (20d) | 0.60 | 3.35 | 0.005 | Yes |
-| Momentum (60d) | 0.09 | 0.40 | 0.710 | No |
-| Reversal (20d) | -0.09 | -0.43 | 0.691 | No |
-
-The volatility factor shows strong predictive power. Momentum and reversal factors are not significant, consistent with A-share market microstructure.
+三种状态：牛市（60日收益>8%）、熊市（<-5%）、震荡市（其他）。各策略分状态独立回测。
 
 ---
 
-## 6. Actuarial Extensions
+## 5. 实证结果
+
+### 5.1 模型拟合
+
+| 模型 | AIC | BIC | 残差检验 |
+|------|-----|-----|----------|
+| GARCH(1,1) | 2,030 | 2,048 | 白噪声 |
+| ARIMA(2,1,2) | -530 | -512 | 白噪声 |
+
+GARCH条件波动率与Yang-Zhang已实现波动率走势高度吻合。
+
+### 5.2 策略绩效
+
+| 策略 | 夏普 | 收益 | 最大回撤 | 胜率 |
+|------|------|------|----------|------|
+| 综合策略 | 0.43 | +5.2% | -8.2% | 54% |
+| 波动率均值回归 | 0.35 | +4.1% | -6.5% | 52% |
+| 纯情绪驱动 | 0.28 | +3.3% | -7.1% | 51% |
+| 波动率风险溢价 | 0.20 | +2.4% | -9.8% | 48% |
+
+### 5.3 A股vs美股结构性差异
+
+A股夏普比率（0.43）显著低于美股典型结果（1.03+），四大制度因素：
+
+1. **涨跌停限制**：10%日涨跌停截断极端收益，削弱均值回归策略的获利空间；
+2. **做空限制**：仅部分融资融券标的可做空，套利策略无法纠正错误定价；
+3. **散户主导**：散户交易占比超80%，带来追涨杀跌行为和更高噪声；
+4. **政策干预**：政策转变导致统计规律失效，沪深300趋势性强于均值回归。
+
+### 5.4 横截面因子分析
+
+| 因子 | IC | IR | p值 | 显著 |
+|------|-----|-----|-----|------|
+| 波动率（20日） | 0.60 | 3.35 | 0.005 | 是 |
+| 动量（60日） | 0.09 | 0.40 | 0.710 | 否 |
+| 反转（20日） | -0.09 | -0.43 | 0.691 | 否 |
+
+---
+
+## 6. 精算应用
 
 ### 6.1 Solvency II / C-ROSS
 
-GARCH-X conditional volatility feeds directly into SCR calculation. Solvency II uses 99.5% VaR over 1-year horizon. C-ROSS (China) uses 99% VaR with a calibration factor of 0.8. Extreme sentiment stress test applies 1.5x volatility shock, simulating capital depletion under adverse scenarios.
+GARCH-X条件波动率直接输入SCR计算。Solvency II采用99.5% VaR（1年期限），C-ROSS采用99% VaR乘以0.8校准系数。极端情绪压力测试模拟1.5倍波动率冲击下的资本消耗。
 
-### 6.2 Dynamic Loss Reserving
+### 6.2 动态损失准备金
 
-Replaces static 35% reserving with volatility-adjusted dynamic ratio (25%-50% range). Higher volatility during market stress triggers higher reserves, smoothing reported profits. Lower volatility periods see reserve releases.
+以波动率动态调整准备金计提比例（25%-50%区间），替代固定35%计提。高波动期增提、低波动期释放，平滑利润波动。
 
-### 6.3 GARCH-Enhanced Lee-Carter
+### 6.3 GARCH增强Lee-Carter
 
-Standard Lee-Carter assumes constant drift for mortality improvement. GARCH enhancement captures volatility clustering in improvement rates - periods of pandemic-like volatility are followed by recovery periods with lower volatility. This directly impacts life insurance liability valuation and annuity pricing.
-
----
-
-## 7. Limitations
-
-1. LLM sentiment uses rule-based fallback; real OpenAI API access would improve accuracy.
-2. Synthetic data used for mortality and loss reserving; real HMD/CBIRC data would validate results.
-3. Cross-sectional IC computation uses synthetic forward returns; real forward data needed.
-4. Transaction costs at 0.1% may not fully capture institutional market impact.
-5. LSTM and Transformer training uses limited epochs for cloud compatibility.
-6. The Granger causality test shows no significant lag structure in synthetic sentiment data.
+标准Lee-Carter假设恒定改善率漂移，GARCH增强模型捕捉改善率波动聚集效应。直接应用于寿险负债评估和养老年金定价。
 
 ---
 
-## 8. Future Development
+## 7. 项目局限性
 
-### V2.0 (Short-term)
-- Real OpenAI API integration for sentiment
-- Live volatility monitoring dashboard
-- Telegram bot for daily volatility forecasts
-
-### V3.0 (Medium-term)
-- HAR-RV and Neural GARCH models
-- Multi-asset options trading module
-- Production risk management API
-
-### Long-term
-- Integration with insurance asset-liability management systems
-- Real-time liquidity-adjusted VaR calculation
-- Machine learning-based factor discovery
+1. LLM情绪目前使用规则回退，真实OpenAI API可显著提升精度；
+2. 死亡率与理赔数据使用合成数据，需接入HMD/银保监会真实数据验证；
+3. 横截面IC计算使用合成前瞻收益，需真实数据验证；
+4. 0.1%交易成本可能低估机构大单市场冲击；
+5. LSTM/Transformer训练轮次受云端资源限制；
+6. 合成情绪数据的Granger检验未发现显著滞后结构。
 
 ---
 
-## 9. Conclusion
+## 8. 中长期迭代规划
 
-This project demonstrates that combining LLM sentiment analysis with volatility modeling creates value for quantitative trading and actuarial applications. The A-share market application reveals important microstructure differences from US markets. The modular architecture supports continuous extension and improvement.
+### V2.0（短期）
+- 真实OpenAI API情绪接入
+- 实时波动率监控面板
+- Telegram机器人每日波动率预警
+
+### V3.0（中期）
+- HAR-RV与Neural GARCH模型
+- 多资产期权交易模块
+- 生产级风险管理API
+
+### 长期
+- 对接保险资产负债管理系统
+- 流动性调整VaR实时计算
+- 机器学习因子自动发现
 
 ---
 
-## References
+## 9. 结论
+
+本报告证明LLM情绪分析与波动率模型的结合对量化交易和精算应用具有实际价值。A股市场的实证应用揭示了与美股市场的重要微观结构差异。模块化架构支持持续扩展与改进。
+
+---
+
+## 参考文献
 
 - Bollerslev, T. (1986). Generalized autoregressive conditional heteroskedasticity. Journal of Econometrics.
 - Garman, M.B. & Klass, M.J. (1980). On the estimation of security price volatilities. Journal of Business.
