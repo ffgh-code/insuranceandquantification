@@ -354,13 +354,13 @@ def show_actuarial(pipeline):
 
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Current Vol", f"{report['current_vol']:.2%}")
-                c2.metric("Solvency II SCR", f"")
-                c3.metric("C-ROSS SCR", f"")
+                c2.metric("Solvency II SCR", f"${report['latest_scr']:,.0f}")
+                c3.metric("C-ROSS SCR", f"${report['cross_scr']:,.0f}")
 
                 if "capital_adequacy" in report:
                     c4, c5 = st.columns(2)
                     c4.metric("Capital Adequacy", f"{report['capital_adequacy']:.1f}%")
-                    c5.metric("Peak SCR", f"")
+                    c5.metric("Peak SCR", f"${report['peak_scr']:,.0f}")
 
                 market_risk = sc.scratch_market_risk(cond_vol)
                 fig = go.Figure()
@@ -388,9 +388,9 @@ def show_actuarial(pipeline):
         cvar_995 = SolvencyCalculator.calculate_cvar(vol_input, 0.995)
 
         c1, c2, c3 = st.columns(3)
-        c1.metric("VaR (99.5%)", f"")
-        c2.metric("VaR (99%)", f"")
-        c3.metric("CVaR (99.5%)", f"")
+        c1.metric("VaR (99.5%)", f"${var_995 * cap_input:,.0f}")
+        c2.metric("VaR (99%)", f"${var_99 * cap_input:,.0f}")
+        c3.metric("CVaR (99.5%)", f"${cvar_995 * cap_input:,.0f}")
 
     with tab2:
         st.subheader("Insurance Loss Reserving with GARCH")
@@ -534,7 +534,7 @@ def show_solvency_simulation(pipeline):
     with col2:
         cap = st.number_input("Capital Base", 1e6, 1e9, 1e8, step=1e6)
     var = SolvencyCalculator.calculate_var(vol, 0.995)
-    st.metric("VaR 99.5%\ of Capital", f"\")
+    st.metric("VaR 99.5%", f"${var * cap:,.0f}")
 
 def show_reserving_comparison(pipeline):
     st.title("Loss Reserving: Static vs Dynamic")
