@@ -72,35 +72,6 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.caption(f"Last update: {datetime.now():%Y-%m-%d %H:%M}")
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**PDF 报告导出**")
-    st.sidebar.caption(
-        "各页面报表与图表支持一键导出 PDF："
-        "点击页面右上角下载按钮，系统将当前板块的表格、"
-        "指标卡与图表打包为 PDF 报告。"
-    )
-    if st.sidebar.button("导出当前页面为 PDF"):
-        try:
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Helvetica", "B", 16)
-            pdf.cell(0, 10, "Sentiment-Enhanced Volatility Lab - Report", align="C",
-                     new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", "", 10)
-            pdf.cell(0, 8, f"Page: {page}", new_x="LMARGIN", new_y="NEXT")
-            pdf.cell(0, 8, f"Generated: {datetime.now():%Y-%m-%d %H:%M}", new_x="LMARGIN", new_y="NEXT")
-            pdf.cell(0, 8, "GitHub: https://github.com/ffgh-code/insuranceandquantification",
-                     new_x="LMARGIN", new_y="NEXT")
-            pdf.cell(0, 8, "Demo: https://insuranceandquantification-fbmyvwetabtki2r5m8krac.streamlit.app/",
-                     new_x="LMARGIN", new_y="NEXT")
-            out_path = f"output/reports/{page.replace(' ', '_')}_{datetime.now():%Y%m%d_%H%M}.pdf"
-            import os
-            os.makedirs("output/reports", exist_ok=True)
-            pdf.output(out_path)
-            st.sidebar.success(f"已导出：{out_path}")
-        except Exception as e:
-            st.sidebar.error(f"导出失败：{str(e)[:80]}")
 
     with st.spinner("Running full analysis pipeline..."):
         results = run_pipeline()
@@ -367,13 +338,7 @@ def show_actuarial(pipeline):
         "solvency capital, loss reserving, and mortality forecasting."
     )
 
-    tab1, tab2, tab3 = st.tabs([
-        "Solvency II / C-ROSS",
-        "Loss Reserving",
-        "Mortality Forecasting",
-    ])
-
-    with tab1:
+    with st.expander("Solvency II / C-ROSS", expanded=True):
         st.subheader("Solvency Capital Requirement (SCR)")
         st.markdown(
             "Using GARCH volatility forecasts to estimate market risk "
@@ -413,7 +378,7 @@ def show_actuarial(pipeline):
         c2.metric("VaR (99%)", f"${var_99 * cap_input:,.0f}")
         c3.metric("CVaR (99.5%)", f"${cvar_995 * cap_input:,.0f}")
 
-    with tab2:
+    with st.expander("Loss Reserving", expanded=False):
         st.subheader("Insurance Loss Reserving with GARCH")
         st.markdown(
             "Applying volatility models to insurance claim data for loss reserving."
@@ -428,7 +393,7 @@ def show_actuarial(pipeline):
         comp = lr.compare(data, vol_series)
         st.dataframe(comp, use_container_width=True, hide_index=True)
 
-    with tab3:
+    with st.expander("Mortality Forecasting", expanded=False):
         st.subheader("Mortality Improvement Rate Forecasting")
         st.markdown(
             "Comparing Lee-Carter, GARCH, and naive mortality forecasting methods."
