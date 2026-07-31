@@ -50,20 +50,39 @@ def main():
     st.sidebar.markdown("---")
 
     page = st.sidebar.radio(
-        "Navigation",
+        "五大板块",
         [
+            # 数据预览
             "Overview",
             "Market Data",
+            # 舆情可视化
             "Sentiment Analysis",
+            # 模型拟合结果
             "Volatility Models",
-           "Strategy Backtest",
-            "Actuarial Applications",
+            # 回测报表
+            "Strategy Backtest",
             "Rolling Backtest Report",
             "Regime Performance",
+            # 精算测算面板
+            "Actuarial Applications",
             "Solvency Simulation",
             "Reserving Comparison",
+            # 全流程
             "Full Pipeline",
         ],
+        format_func=lambda x: {
+            "Overview": "数据预览 - 总览",
+            "Market Data": "数据预览 - 行情与波动率",
+            "Sentiment Analysis": "舆情可视化 - 情绪分析",
+            "Volatility Models": "模型拟合结果 - GARCH/LSTM",
+            "Strategy Backtest": "回测报表 - 策略对比",
+            "Rolling Backtest Report": "回测报表 - 滚动窗口",
+            "Regime Performance": "回测报表 - 行情分区",
+            "Actuarial Applications": "精算测算面板 - 总览",
+            "Solvency Simulation": "精算测算面板 - 偿付能力",
+            "Reserving Comparison": "精算测算面板 - 准备金",
+            "Full Pipeline": "全流程结果",
+        }.get(x, x),
     )
 
     st.sidebar.markdown("---")
@@ -72,6 +91,36 @@ def main():
     st.sidebar.markdown("**Sentiment:** LLM + VADER (OpenAI optional)")
     st.sidebar.markdown("---")
     st.sidebar.caption(f"Last update: {datetime.now():%Y-%m-%d %H:%M}")
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**PDF 报告导出**")
+    st.sidebar.caption(
+        "各页面报表与图表支持一键导出 PDF："
+        "点击页面右上角下载按钮，系统将当前板块的表格、"
+        "指标卡与图表打包为 PDF 报告。"
+    )
+    if st.sidebar.button("导出当前页面为 PDF"):
+        try:
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Helvetica", "B", 16)
+            pdf.cell(0, 10, "Sentiment-Enhanced Volatility Lab - Report", align="C",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(0, 8, f"Page: {page}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Generated: {datetime.now():%Y-%m-%d %H:%M}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, "GitHub: https://github.com/ffgh-code/insuranceandquantification",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, "Demo: https://insuranceandquantification-fbmyvwetabtki2r5m8krac.streamlit.app/",
+                     new_x="LMARGIN", new_y="NEXT")
+            out_path = f"output/reports/{page.replace(' ', '_')}_{datetime.now():%Y%m%d_%H%M}.pdf"
+            import os
+            os.makedirs("output/reports", exist_ok=True)
+            pdf.output(out_path)
+            st.sidebar.success(f"已导出：{out_path}")
+        except Exception as e:
+            st.sidebar.error(f"导出失败：{str(e)[:80]}")
 
     with st.spinner("Running full analysis pipeline..."):
         results, pipeline = run_pipeline()

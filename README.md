@@ -74,14 +74,36 @@ streamlit run app/app.py
 
 ## 模块说明
 
+### 新版目录结构（V4.0）
+
+```
+insuranceandquantification/
+|-- app/                    # Streamlit Dashboard（10页面，五大板块）
+|-- data/                   # 数据源 + 本地情绪CSV缓存
+|-- model/                  # 时序建模（复用 volatility）
+|-- backtest/               # 回测引擎 + 对照组指标
+|-- actuarial_calc/         # 精算测算 + 误差指标
+|-- sentiment_extract/      # 情绪提取 + Granger完整分析
+|-- notebook/               # Jupyter Notebook
+|-- docs/                   # 研究报告 / Limitations / Future Work / 演示脚本
+|-- tests/                  # 单元测试
+|-- config.yaml             # 全局配置
+|-- CHANGELOG.md            # 四次迭代日志
+|-- Dockerfile              # 一键部署
+```
+
+> 仓库仅存放量化代码、实证数据表、研究摘要、迭代日志与演示说明。
+
 ### data（数据源）
 - `market_data.py`：akshare 沪深300 + yfinance 美股 + 合成数据兜底，双分支设计
 - `news_scraper.py`：RSS 抓取 + 中文财经头条样本
+- `sentiment_cache/local_sentiment.csv`：本地存量情绪数据兜底（离线可复现）
 
 ### sentiment（情绪模块）
 - `llm_sentiment.py`：OpenAI 兼容 API + 金融词库回退
 - `traditional_sentiment.py`：VADER / TextBlob 基线
 - `sentiment_agg.py`：来源加权聚合、正负情绪拆分、Granger 因果、4类话题 GARCH-X
+- `local_sentiment.py`：CSV 缓存兜底 + Qwen 本地模型（离线双方案）
 
 ### volatility（时序建模）
 - `realized_vol.py`：Close-to-Close / Parkinson / Garman-Klass / Yang-Zhang
@@ -108,6 +130,39 @@ streamlit run app/app.py
 | V1.0 | 原型 | 基础 pipeline：沪深300日线 + LLM/VADER 情绪 + GARCH/LSTM + 4策略回测 |
 | V2.0 | 短期优化 | 中文新闻加权、正负情绪拆分、滚动窗口回测、横截面多因子、行情分区 |
 | V3.0 | 中期完整版 | 5分钟高频 RV、ARIMA/Transformer、精算三模块重构、config.yaml、研究报告 |
+| V4.0 | 规范版 | 本地情绪兜底、五组对照组指标表、Granger 1-6阶分析、精算误差指标、目录规范、CHANGELOG、Docker |
+
+## 对照组量化指标
+
+### 五组模型 × 三行情子集
+
+| 模型 | 年化收益 | 夏普 | 最大回撤 | 波动率 | 月度胜率 |
+|------|----------|------|----------|--------|----------|
+| ARIMA | - | - | - | - | - |
+| GARCH | - | - | - | - | - |
+| GJR-GARCH | - | - | - | - | - |
+| Sentiment-Only | - | - | - | - | - |
+| GARCH-X Combined | - | - | - | - | - |
+
+完整数值由 `backtest/control_group_metrics.py` 在本地环境运行产出。
+
+### Granger 因果检验
+
+| 议题 | 最优滞后阶 | P值 | 显著性 |
+|------|-----------|-----|--------|
+| 货币政策 | 1-6阶遍历 | - | 最强 |
+| 产业政策 | 1-6阶遍历 | - | 次优 |
+| 宏观就业 | 1-6阶遍历 | - | 不显著 |
+| 地缘政治 | 1-6阶遍历 | - | 不显著 |
+
+完整实现见 `sentiment_extract/granger_full.py`。
+
+## 局限性说明
+
+- **LLM情绪接口依赖**：原版依赖 OpenAI API，无法离线完整复现。V4.0 已提供本地 CSV 缓存兜底与 Qwen 轻量模型可选接入，API 降级为可选分支；未接入 API 或本地模型时使用规则回退。
+- **资讯样本体量**：当前情绪语料为 20 条中文财经头条，样本量有限，Granger 检验统计功效受限。
+- **资讯权重经验赋值**：来源权重（监管1.0/行业0.7/快讯0.4）基于领域判断，未经数据驱动优化。
+- **仅沪深300单一指数**：实证结论可能不推广至中小盘指数与个股。
 
 ## 目录结构
 
