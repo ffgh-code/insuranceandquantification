@@ -74,7 +74,7 @@ streamlit run app/app.py
 
 ## 模块说明
 
-### 新版目录结构（V4.0）
+### 新版目录结构（V5.0）
 
 ```
 insuranceandquantification/
@@ -88,7 +88,7 @@ insuranceandquantification/
 |-- docs/                   # 研究报告 / Limitations / Future Work / 演示脚本
 |-- tests/                  # 单元测试
 |-- config.yaml             # 全局配置
-|-- CHANGELOG.md            # 四次迭代日志
+|-- CHANGELOG.md            # 五次迭代日志
 |-- Dockerfile              # 一键部署
 ```
 
@@ -98,12 +98,21 @@ insuranceandquantification/
 - `market_data.py`：akshare 沪深300 + yfinance 美股 + 合成数据兜底，双分支设计
 - `news_scraper.py`：RSS 抓取 + 中文财经头条样本
 - `sentiment_cache/local_sentiment.csv`：本地存量情绪数据兜底（离线可复现）
+- `csi300_daily.csv`：2018-2026 真实沪深300日线样本
+- `cl_mortality_panel.csv`：官方 CL(2000-2003)/CL(2010-2013) 经验生命表，按性别与业务线拆分
 
 ### sentiment（情绪模块）
 - `llm_sentiment.py`：OpenAI 兼容 API + 金融词库回退
 - `traditional_sentiment.py`：VADER / TextBlob 基线
 - `sentiment_agg.py`：来源加权聚合、正负情绪拆分、Granger 因果、4类话题 GARCH-X
 - `local_sentiment.py`：CSV 缓存兜底 + Qwen 本地模型（离线双方案）
+
+### model（时序建模）
+- `ms_garch.py`：两/三区制 Markov-Switching GARCH，支持类别情绪通道
+- `msj_garch.py`：统一区制切换跳跃 GARCH 联合模型
+- `category_heterogeneity.py`：货币政策/产业政策/就业/地缘类别异质性检验
+- `sentiment_proxy.py`：可复现的类别情绪代理序列
+- `sentiment_shock.py`：情绪冲击传导与脉冲响应
 
 ### volatility（时序建模）
 - `realized_vol.py`：Close-to-Close / Parkinson / Garman-Klass / Yang-Zhang
@@ -121,7 +130,7 @@ insuranceandquantification/
 ### actuary（精算工具）
 - `solvency.py`：Solvency II + C-ROSS 双框架 SCR 计算、压力测试
 - `loss_modeling.py`：静态 vs 动态准备金
-- `mortality.py`：朴素 / Lee-Carter / GARCH-LC 三模型对照
+- `mortality.py`：基于官方经验生命表的朴素 / Lee-Carter / GARCH-LC 三模型对照
 
 ## 版本迭代记录
 
@@ -131,6 +140,7 @@ insuranceandquantification/
 | V2.0 | 短期优化 | 中文新闻加权、正负情绪拆分、滚动窗口回测、横截面多因子、行情分区 |
 | V3.0 | 中期完整版 | 5分钟高频 RV、ARIMA/Transformer、精算三模块重构、config.yaml、研究报告 |
 | V4.0 | 规范版 | 本地情绪兜底、五组对照组指标表、Granger 1-6阶分析、精算误差指标、目录规范、CHANGELOG、Docker |
+| V5.0 | 理论计量升级 | 三区制 MS-GARCH、类别情绪异质性、MSJ-GARCH、官方 CL 生命表真实分险种死亡样本、全量结果 JSON |
 
 ## 对照组量化指标
 

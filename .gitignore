@@ -37,6 +37,10 @@ data/processed/*
 !data/processed/.gitkeep
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/csi300_daily.csv
+!data/raw/cl_mortality_panel.csv
+!data/raw/sources/
+!data/raw/sources/**
 
 # API keys
 *.key

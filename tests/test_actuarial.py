@@ -43,7 +43,12 @@ class TestMortality:
     def test_load(self):
         from actuarial.mortality import MortalityForecaster
         mf = MortalityForecaster(); d = mf.load()
-        assert len(d) == 50
+        assert len(d) == 1060
+        assert {"vintage", "age", "gender", "line", "qx"}.issubset(d.columns)
+        assert set(d["vintage"].unique()) == {2000, 2010}
+        assert set(d["line"].unique()) == {
+            "non_pension_type1", "non_pension_type2", "pension"
+        }
     def test_lee_carter(self):
         from actuarial.mortality import MortalityForecaster
         mf = MortalityForecaster(); d = mf.load()
