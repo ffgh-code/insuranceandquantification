@@ -267,3 +267,29 @@ class MarkovSwitchingGARCH:
             maxp = self.filtered_probs.max(axis=1)
             idx = np.where(maxp < threshold, -1, idx)
         return idx
+
+    def forecast_variance(self, returns, sentiment=None, horizon: int = 1) -> float:
+        """One-day-ahead regime-weighted variance forecast."""
+        if self.params is None:
+            raise RuntimeError("Fit the model before forecasting.")
+        returns = np.asarray(returns, dtype=float).ravel()
+        sentiment, _ = _sentiment_matrix(sentiment, self.categories, len(returns))
+        h = self._variance_paths(returns, sentiment, self.params)
+        omega, alpha, beta, delta, lam, _ = self._param_slices(self.params)
+        probs = self.filtered_probs[-1]
+        prev = np.maximum(h[-1], 1e-8)
+        z = returns[-1] / np.sqrt(prev)
+        neg = np.where(z < 0, np.abs(z), 0.0)
+        h_next = np.exp(
+            omega
+            + alpha * (np.abs(z) - np.sqrt(2.0 / np.pi))
+            + beta * np.log(prev)
+            + delta * neg
+            + lam @ sentiment[-1]
+        )
+        var = float(probs @ h_next)
+        for _ in range(1, horizon):
+            prev = np.maximum(h_next, 1e-8)
+            h_next = np.exp(omega + beta * np.log(prev) + lam @ sentiment[-1])
+            var = float(probs @ h_next)
+        return var
