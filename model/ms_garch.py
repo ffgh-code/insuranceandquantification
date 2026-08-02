@@ -168,7 +168,7 @@ class MarkovSwitchingGARCH:
         return np.concatenate([omega, alpha, beta, delta, lam, raw.ravel()])
 
     def fit(self, returns, sentiment=None, n_iter: int = 200, max_iter: int = 300,
-            seed: int = 42, use_optimizer: bool = False) -> dict:
+            seed: int = 42, use_optimizer: bool = False, polish: bool = False) -> dict:
         """Estimate the regime-switching GARCH.
 
         By default a structured random search is used, matching the lightweight
@@ -201,6 +201,22 @@ class MarkovSwitchingGARCH:
             if np.isfinite(ll) and ll > best_ll:
                 best_ll = ll
                 best_params = cand.copy()
+        if polish and best_params is not None:
+            try:
+                res = minimize(
+                    lambda x: -self._log_likelihood(returns, sentiment, x),
+                    best_params,
+                    method="L-BFGS-B",
+                    bounds=bounds,
+                    options={"maxiter": max_iter},
+                )
+                cand = res.x
+                ll = self._log_likelihood(returns, sentiment, cand)
+                if np.isfinite(ll) and ll > best_ll:
+                    best_ll = ll
+                    best_params = cand
+            except Exception:
+                pass
         if best_params is None:
             raise RuntimeError("MS-GARCH estimation failed: no finite likelihood found.")
         self.params = best_params

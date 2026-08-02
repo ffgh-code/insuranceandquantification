@@ -41,6 +41,8 @@ data/raw/*
 !data/raw/cl_mortality_panel.csv
 !data/raw/sources/
 !data/raw/sources/**
+!data/raw/multimarket/
+!data/raw/multimarket/**
 
 # API keys
 *.key
