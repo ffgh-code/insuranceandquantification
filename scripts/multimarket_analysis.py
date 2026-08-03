@@ -63,18 +63,19 @@ def fit_models(market: str, returns: pd.Series) -> dict:
     r = returns * 100.0
     sentiment = build_sentiment(returns)
     overall = sentiment.mean(axis=1)
+    seed = 100 + sum(ord(c) for c in market) % 900
 
     garch = GARCHModel(p=1, q=1, model_type="GARCH", distribution="normal").fit(returns)
     gjr = GARCHModel(p=1, q=1, model_type="GJR-GARCH", distribution="normal").fit(returns)
 
     ms0 = MarkovSwitchingGARCH(n_regimes=2)
-    r0 = ms0.fit(r, None, n_iter=500)
+    r0 = ms0.fit(r, None, n_iter=500, seed=seed)
 
     ms1 = MarkovSwitchingGARCH(n_regimes=2)
-    r1 = ms1.fit(r, overall, n_iter=500)
+    r1 = ms1.fit(r, overall, n_iter=500, seed=seed + 1)
 
     ms2 = MarkovSwitchingGARCH(n_regimes=2, category_names=["positive", "negative"])
-    r2 = ms2.fit(r, sentiment, n_iter=500)
+    r2 = ms2.fit(r, sentiment, n_iter=500, seed=seed + 2)
 
     return {
         "market": market,

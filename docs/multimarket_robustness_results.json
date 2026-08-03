@@ -1,0 +1,68 @@
+{
+  "csi300": {
+    "parkinson_corr": 0.589941538701325,
+    "alternative_sentiment_negative": {
+      "aic": 6449.555511270623,
+      "bic": 6528.510503300636,
+      "log_likelihood": -3210.7777556353117
+    },
+    "subsample_first_half": {
+      "start": "2018-01-03",
+      "end": "2022-04-15",
+      "aic": 3467.566286841809,
+      "bic": 3536.8104827171983,
+      "log_likelihood": -1719.7831434209045
+    },
+    "subsample_second_half": {
+      "start": "2022-04-18",
+      "end": "2026-07-30",
+      "aic": 3023.0576374658544,
+      "bic": 3092.3153013557503,
+      "log_likelihood": -1497.5288187329272
+    }
+  },
+  "sp500": {
+    "parkinson_corr": 0.6457645168050139,
+    "alternative_sentiment_negative": {
+      "aic": 15339.61454001886,
+      "bic": 15432.645359892658,
+      "log_likelihood": -7655.80727000943
+    },
+    "subsample_first_half": {
+      "start": "2004-01-05",
+      "end": "2015-04-15",
+      "aic": 7919.60696750034,
+      "bic": 8002.933726846299,
+      "log_likelihood": -3945.80348375017
+    },
+    "subsample_second_half": {
+      "start": "2015-04-16",
+      "end": "2026-07-31",
+      "aic": 7529.27068356319,
+      "bic": 7612.597442909148,
+      "log_likelihood": -3750.635341781595
+    }
+  },
+  "stoxx50": {
+    "parkinson_corr": 0.5303680985859317,
+    "alternative_sentiment_negative": {
+      "aic": 2732.603139781536,
+      "bic": 2801.2977066826156,
+      "log_likelihood": -1352.301569890768
+    },
+    "subsample_first_half": {
+      "start": "2022-09-08",
+      "end": "2024-08-19",
+      "aic": 1322.7158290741231,
+      "bic": 1381.6923144146444,
+      "log_likelihood": -647.3579145370616
+    },
+    "subsample_second_half": {
+      "start": "2024-08-20",
+      "end": "2026-07-31",
+      "aic": 1443.2464311966617,
+      "bic": 1502.2509445745723,
+      "log_likelihood": -707.6232155983308
+    }
+  }
+}
